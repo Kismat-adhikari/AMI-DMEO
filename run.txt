@@ -1,0 +1,25 @@
+# Run instructions for the Flask API (PowerShell)
+
+# 1) Create and activate a virtual environment (recommended):
+#    python -m venv venv
+#    .\venv\Scripts\Activate.ps1
+
+# 2) Install server requirements:
+#    pip install -r server\requirements.txt
+
+# 3) Run the Flask app directly (development, debug mode):
+#    python server\app.py
+
+# Environment variables (optional):
+# - PORT (default 5000)
+# - MONGO_URI (default mongodb://localhost:27017/ami-demo)
+# - FRONTEND_ORIGIN (default http://localhost:5173)
+# Example (PowerShell):
+#    $env:PORT = "5000"; $env:MONGO_URI = "mongodb://localhost:27017/ami-demo"; python server\app.py
+
+# Alternatively run with flask CLI (if you prefer):
+#    $env:FLASK_APP = "server.app:create_app"; $env:FLASK_ENV = "development"; flask run --host=0.0.0.0 --port 5000
+
+# Notes:
+# - The app binds 0.0.0.0 by default when run via python server\app.py (see server/app.py if you need to change host/port).
+# - In production use a WSGI server (gunicorn/uvicorn) behind a reverse proxy.

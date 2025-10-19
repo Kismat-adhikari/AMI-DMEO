@@ -1,3 +1,7 @@
+# -----------------------------
+# NODE.JS / FRONTEND
+# -----------------------------
+
 # Node dependencies
 node_modules/
 
@@ -18,20 +22,17 @@ dist/
 
 # Logs
 *.log
-
-# Editor/IDE files (optional)
-.vscode/
-.idea/
-
-# macOS
-.DS_Store
-# Windows
-Thumbs.db
-
-# Logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Editor/IDE files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
 
 # Testing
 coverage/
@@ -39,11 +40,37 @@ coverage/
 # TypeScript
 *.tsbuildinfo
 
-# Misc
+
+# -----------------------------
+# PYTHON / FLASK BACKEND
+# -----------------------------
+
+# Python cache and compiled files
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual environment
+venv/
+server/venv/
+
+# Python build and distribution
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Local environment and config files
+instance/
+*.env
+*.env.*
+
+# Flask-specific
+*.db
+*.sqlite3
+
+# -----------------------------
+# MISC
+# -----------------------------
 .env
 .env.*.local
-
-
-# OS files
-.DS_Store
-Thumbs.db
