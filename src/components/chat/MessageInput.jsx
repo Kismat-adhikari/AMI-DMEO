@@ -52,16 +52,14 @@ const MessageInput = ({ onSend, isLandingMode = false }) => {
 
   const handleSend = () => {
     if (input.trim() || (images && images.length > 0) || (attachments && attachments.length > 0)) {
-      onSend(input, images, attachments);
+      // Send the message with current images and attachments
+      onSend(input, images || [], attachments || []);
       setInput('');
-      if (images && images.length > 0) {
-        // revoke all object URLs and clear
-        images.forEach((u) => URL.revokeObjectURL(u));
-        setImages([]);
-      }
-      if (attachments && attachments.length > 0) {
-        setAttachments([]);
-      }
+      
+      // Clear the arrays but don't revoke object URLs yet
+      // The URLs are still needed for the message display
+      setImages([]);
+      setAttachments([]);
     }
   };
 
@@ -208,7 +206,7 @@ const MessageInput = ({ onSend, isLandingMode = false }) => {
     ta.style.height = newHeight + 'px';
   }, [input]);
 
-  // revoke object URL on unmount or when image changes
+  // Cleanup object URLs only on component unmount
   useEffect(() => {
     // cleanup on unmount: revoke any object URLs
     return () => {
@@ -216,7 +214,7 @@ const MessageInput = ({ onSend, isLandingMode = false }) => {
         images.forEach((u) => URL.revokeObjectURL(u));
       }
     };
-  }, [images]);
+  }, []); // Remove dependency on images array
 
   return (
     <div className={`${isLandingMode ? 'p-0' : 'p-4 border-t border-slate-800/50 bg-slate-950/80 backdrop-blur-2xl'}`}>
@@ -436,7 +434,7 @@ const MessageInput = ({ onSend, isLandingMode = false }) => {
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={handleSend}
-          disabled={!input.trim()}
+          disabled={!input.trim() && (!images || images.length === 0) && (!attachments || attachments.length === 0)}
           className="p-4 bg-gradient-to-r from-cyan-500 via-purple-500 to-pink-500 rounded-2xl text-white hover:shadow-2xl hover:shadow-cyan-500/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden group"
         >
           <Send className="w-5 h-5 relative z-10" />

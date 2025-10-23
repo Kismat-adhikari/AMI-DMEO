@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Brain, TrendingUp, BookOpen, Sparkles } from 'lucide-react';
 
@@ -18,17 +18,45 @@ const Ami = () => {
   const [hasStartedChat, setHasStartedChat] = useState(false);
   const chatWindowRef = useRef(null);
 
-  const handleSendMessage = (text) => {
+  // Clean up object URLs when component unmounts to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      // Clean up all object URLs from messages on unmount
+      messages.forEach(message => {
+        if (message.images) {
+          message.images.forEach(image => {
+            if (image.url && image.url.startsWith('blob:')) {
+              URL.revokeObjectURL(image.url);
+            }
+          });
+        }
+      });
+    };
+  }, []);
+
+  const handleSendMessage = (text, images = [], attachments = []) => {
     // Mark that chat has started on first message
     if (!hasStartedChat) {
       setHasStartedChat(true);
     }
 
+    // Process attachments to include file data for display
+    const processedAttachments = attachments.map(att => ({
+      id: att.id,
+      name: att.name,
+      size: att.size,
+      type: att.type,
+      // Keep the file object for potential future upload functionality
+      file: att.file
+    }));
+
     const userMessage = {
       id: messages.length + 1,
-      text,
+      text: text.trim(),
       isBot: false,
       time: 'Just now',
+      images: images || [],
+      attachments: processedAttachments || [],
     };
     setMessages([...messages, userMessage]);
     
@@ -44,10 +72,22 @@ const Ami = () => {
       let response;
       let content = null;
       
+      // Check if files were sent
+      const hasImages = images && images.length > 0;
+      const hasAttachments = attachments && attachments.length > 0;
+      
       if (messages.length === 1) {
-        response = "Hello! I'm Ami, your intelligent AI companion. I can help you with analysis, create interactive content, and answer your questions. Let me help you with your request.";
+        if (hasImages || hasAttachments) {
+          response = "Hello! I'm Ami, your intelligent AI companion. I can see you've shared some files with me. I can help analyze images, documents, and answer questions about your attachments. How can I assist you with these files?";
+        } else {
+          response = "Hello! I'm Ami, your intelligent AI companion. I can help you with analysis, create interactive content, and answer your questions. Let me help you with your request.";
+        }
       } else {
-        response = "I understand your question. I'm here to assist you with anything you need. This is a demo response - in a real implementation, I would provide intelligent, contextual responses to your queries.";
+        if (hasImages || hasAttachments) {
+          response = "I can see the files you've shared. In a real implementation, I would analyze these attachments and provide insights based on their content. What would you like me to help you with regarding these files?";
+        } else {
+          response = "I understand your question. I'm here to assist you with anything you need. This is a demo response - in a real implementation, I would provide intelligent, contextual responses to your queries.";
+        }
       }
 
       if (text.toLowerCase().includes('stock') || text.toLowerCase().includes('chart')) {
