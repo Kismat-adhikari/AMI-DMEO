@@ -355,13 +355,16 @@ const MessageInput = ({ onSend }) => {
   }, [menuOpen]);
 
   const handleSend = () => {
-    if (input.trim() || (images && images.length > 0)) {
-      onSend(input, images);
+    if (input.trim() || (images && images.length > 0) || (attachments && attachments.length > 0)) {
+      onSend(input, images, attachments);
       setInput('');
       if (images && images.length > 0) {
         // revoke all object URLs and clear
         images.forEach((u) => URL.revokeObjectURL(u));
         setImages([]);
+      }
+      if (attachments && attachments.length > 0) {
+        setAttachments([]);
       }
     }
   };
@@ -370,6 +373,124 @@ const MessageInput = ({ onSend }) => {
   const fileInputRef = useRef(null);
   const [images, setImages] = useState([]);
   const [previewIndex, setPreviewIndex] = useState(null);
+  const fileAttachRef = useRef(null);
+  const [attachments, setAttachments] = useState([]);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragKind, setDragKind] = useState(null); // 'image' | 'file' | 'mixed'
+  const dragCounter = useRef(0);
+
+  const detectDragKind = (items) => {
+    if (!items || items.length === 0) return null;
+    let hasImage = false;
+    let hasFile = false;
+    for (let i = 0; i < items.length; i++) {
+      const it = items[i];
+      // item may be a DataTransferItem
+      const type = it.type || (it.kind === 'file' && it.type) || '';
+      if (type && type.startsWith('image/')) hasImage = true;
+      else if (it.kind === 'file' || type) hasFile = true;
+    }
+    if (hasImage && hasFile) return 'mixed';
+    if (hasImage) return 'image';
+    if (hasFile) return 'file';
+    return 'file';
+  };
+
+  const handleDragEnter = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const kind = detectDragKind(e.dataTransfer.items);
+    setDragKind(kind);
+    setIsDragging(true);
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+    const kind = detectDragKind(e.dataTransfer.items);
+    setDragKind(kind);
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // only clear dragging if leaving the container
+    setIsDragging(false);
+    setDragKind(null);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    const dt = e.dataTransfer;
+    const files = Array.from(dt.files || []);
+    if (files.length) {
+      const imageFiles = files.filter((f) => f.type.startsWith('image/'));
+      const otherFiles = files.filter((f) => !f.type.startsWith('image/'));
+      if (imageFiles.length) {
+        const urls = imageFiles.map((f) => URL.createObjectURL(f));
+        setImages((prev) => [...prev, ...urls]);
+      }
+      if (otherFiles.length) {
+        const items = otherFiles.map((f) => ({
+          id: Math.random().toString(36).slice(2, 9),
+          name: f.name,
+          size: f.size,
+          type: f.type,
+          file: f,
+        }));
+        setAttachments((prev) => [...prev, ...items]);
+      }
+    }
+    setDragKind(null);
+  };
+
+  // global drag handlers so drop works anywhere on the page
+  useEffect(() => {
+    const onWindowDragEnter = (e) => {
+      e.preventDefault();
+      dragCounter.current += 1;
+      const kind = detectDragKind(e.dataTransfer.items);
+      setDragKind(kind);
+      setIsDragging(true);
+    };
+
+    const onWindowDragOver = (e) => {
+      e.preventDefault();
+      const kind = detectDragKind(e.dataTransfer.items);
+      setDragKind(kind);
+    };
+
+    const onWindowDragLeave = (e) => {
+      e.preventDefault();
+      dragCounter.current -= 1;
+      if (dragCounter.current <= 0) {
+        dragCounter.current = 0;
+        setIsDragging(false);
+        setDragKind(null);
+      }
+    };
+
+    const onWindowDrop = (e) => {
+      e.preventDefault();
+      dragCounter.current = 0;
+      handleDrop(e);
+    };
+
+    window.addEventListener('dragenter', onWindowDragEnter);
+    window.addEventListener('dragover', onWindowDragOver);
+    window.addEventListener('dragleave', onWindowDragLeave);
+    window.addEventListener('drop', onWindowDrop);
+
+    return () => {
+      window.removeEventListener('dragenter', onWindowDragEnter);
+      window.removeEventListener('dragover', onWindowDragOver);
+      window.removeEventListener('dragleave', onWindowDragLeave);
+      window.removeEventListener('drop', onWindowDrop);
+    };
+  }, []);
 
   const handleKeyPress = (e) => {
     // handle Enter to send (preserve Shift+Enter for newline)
@@ -468,11 +589,14 @@ const MessageInput = ({ onSend }) => {
                     Insert Image
                   </button>
                   <button
-                    onClick={() => setMenuOpen(false)}
+                    onClick={() => {
+                      if (fileAttachRef && fileAttachRef.current) fileAttachRef.current.click();
+                      setMenuOpen(false);
+                    }}
                     className="w-full flex items-center gap-3 px-4 py-2 text-left text-sm text-slate-300 hover:bg-slate-800/60 hover:text-white transition-colors"
                   >
                     <File className="w-4 h-4 text-emerald-400" />
-                    Insert File
+                    Attach File
                   </button>
                 </div>
               </motion.div>
@@ -481,7 +605,33 @@ const MessageInput = ({ onSend }) => {
           )}
         </div>
 
-        <div className="flex-1 bg-slate-900/80 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-3 focus-within:border-cyan-500/50 focus-within:shadow-lg focus-within:shadow-cyan-500/20 transition-all">
+        <div
+          onDragEnter={handleDragEnter}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          className="flex-1 bg-slate-900/80 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-3 focus-within:border-cyan-500/50 focus-within:shadow-lg focus-within:shadow-cyan-500/20 transition-all relative"
+        >
+          {/* Drag overlay */}
+          {isDragging && (
+            <div className="absolute inset-0 z-40 flex items-center justify-center pointer-events-none">
+              <div className="flex flex-col items-center gap-2 bg-gradient-to-br from-slate-900/80 to-slate-800/70 border border-slate-700/50 rounded-xl px-6 py-4 backdrop-blur-lg">
+                <div className="flex items-center gap-3">
+                  {dragKind === 'image' ? (
+                    <Image className="w-6 h-6 text-cyan-400" />
+                  ) : (
+                    <File className="w-6 h-6 text-emerald-400" />
+                  )}
+                      <div className="text-center">
+                        <div className="text-xl leading-none" style={{ fontFamily: '"Bebas Neue", system-ui, sans-serif', letterSpacing: '0.06em' }}>DROP IT HERE</div>
+                        <div className="text-xs text-slate-400 mt-1" style={{ fontFamily: '"Space Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, monospace' }}>
+                          {dragKind === 'image' ? 'image(s) — release to attach' : dragKind === 'file' ? 'file(s) — release to attach' : 'files or images — release to attach'}
+                        </div>
+                      </div>
+                </div>
+              </div>
+            </div>
+          )}
           {/* Hidden file input for image insertion */}
           <input
             ref={fileInputRef}
@@ -498,6 +648,27 @@ const MessageInput = ({ onSend }) => {
               }
               // close menu if open
               setMenuOpen(false);
+            }}
+          />
+
+          {/* Hidden general file attachment picker */}
+          <input
+            ref={fileAttachRef}
+            type="file"
+            multiple
+            className="hidden"
+            onChange={(e) => {
+              const files = Array.from(e.target.files || []);
+              if (files.length) {
+                const items = files.map((f) => ({
+                  id: Math.random().toString(36).slice(2, 9),
+                  name: f.name,
+                  size: f.size,
+                  type: f.type,
+                  file: f,
+                }));
+                setAttachments((prev) => [...prev, ...items]);
+              }
             }}
           />
 
@@ -522,6 +693,28 @@ const MessageInput = ({ onSend }) => {
                     }}
                     aria-label={`Remove image ${i + 1}`}
                     className="absolute top-1 right-1 bg-black/60 rounded-full p-1 text-white hover:bg-black/80"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Attachments (files) */}
+          {attachments && attachments.length > 0 && (
+            <div className="flex gap-2 flex-wrap mb-2 items-center">
+              {attachments.map((att) => (
+                <div key={att.id} className="flex items-center gap-2 bg-slate-900/60 border border-slate-700/40 rounded-md px-2 py-1 text-xs">
+                  <div className="w-5 h-5 flex items-center justify-center text-slate-300">
+                    {/* simple file icon */}
+                    <File className="w-4 h-4" />
+                  </div>
+                  <div className="max-w-[160px] truncate">{att.name}</div>
+                  <button
+                    onClick={() => setAttachments((prev) => prev.filter((a) => a.id !== att.id))}
+                    className="ml-1 text-slate-400 hover:text-white"
+                    aria-label={`Remove ${att.name}`}
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
@@ -579,6 +772,25 @@ const MessageInput = ({ onSend }) => {
             >
               <X className="w-4 h-4" />
             </button>
+          </div>
+        </div>,
+        document.body
+      )}
+      {/* Global drop overlay (portal) */}
+      {isDragging && createPortal(
+        <div className="fixed inset-0 z-60 flex items-center justify-center pointer-events-none">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+          <div className="relative z-70 flex items-center gap-6 bg-slate-900/80 border border-slate-700/50 rounded-2xl px-8 py-6">
+            <div className="flex items-center gap-3 transform -rotate-6">
+              <Image className="w-8 h-8 text-cyan-400 -rotate-3" />
+              <File className="w-8 h-8 text-emerald-400 rotate-6" />
+            </div>
+            <div className="text-center">
+              <div className="text-3xl text-white" style={{ fontFamily: '"Bebas Neue", system-ui, sans-serif', letterSpacing: '0.03em' }}>DROP TO SHARE</div>
+              <div className="text-sm text-slate-300 mt-1" style={{ fontFamily: '"Space Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, monospace' }}>
+                {dragKind === 'image' ? 'image(s) • release to add' : dragKind === 'file' ? 'file(s) • release to add' : 'images or files • release to add'}
+              </div>
+            </div>
           </div>
         </div>,
         document.body
