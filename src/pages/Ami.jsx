@@ -1,6 +1,7 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Mic, Menu, X, MessageSquare, Settings, Clock, Sparkles, TrendingUp, Brain, BookOpen, Plus, Zap, Code, BarChart3 } from 'lucide-react';
+import { Send, Mic, Menu, X, MessageSquare, Settings, Clock, Sparkles, TrendingUp, Brain, BookOpen, Plus, Zap, Code, BarChart3, Image, File } from 'lucide-react';
 
 // Animated Background Component with Particles
 const AnimatedBackground = () => {
@@ -81,7 +82,7 @@ const Sidebar = ({ isOpen, onToggle }) => {
           animate={{ width: 280, opacity: 1 }}
           exit={{ width: 0, opacity: 0 }}
           transition={{ type: "spring", damping: 30, stiffness: 300 }}
-          className="h-screen bg-slate-950/80 backdrop-blur-2xl border-r border-slate-800/50 flex-shrink-0 overflow-hidden fixed left-0 top-0 z-50 lg:relative lg:z-auto"
+          className="h-screen bg-slate-950/80 backdrop-blur-2xl border-r border-slate-800/50 flex-shrink-0 overflow-hidden"
         >
           <div className="flex flex-col h-full p-4">
             {/* Header */}
@@ -293,10 +294,53 @@ const ChatWindow = ({ messages, isTyping }) => {
   );
 };
 
-// Enhanced Message Input with Plus Menu
+// Enhanced Message Input
 const MessageInput = ({ onSend }) => {
   const [input, setInput] = useState('');
+
   const [menuOpen, setMenuOpen] = useState(false);
+  const btnRef = useRef(null);
+  const menuRef = useRef(null);
+  const [menuStyle, setMenuStyle] = useState(null);
+
+  // useLayoutEffect so we can measure DOM synchronously after render
+  useLayoutEffect(() => {
+    if (!menuOpen) {
+      setMenuStyle(null);
+      return;
+    }
+
+    function updatePosition() {
+      const btn = btnRef.current;
+      const menu = menuRef.current;
+      if (!btn || !menu) return;
+
+      const btnRect = btn.getBoundingClientRect();
+      const menuRect = menu.getBoundingClientRect();
+      const viewportWidth = window.innerWidth;
+
+      const menuHeight = menuRect.height || 140;
+      const menuWidth = menuRect.width || 180;
+
+      // prefer above
+      let top = btnRect.top - menuHeight - 8;
+      // if not enough space, place below (but prefer above)
+      if (top < 8) top = btnRect.bottom + 8;
+
+      let left = btnRect.left + btnRect.width / 2 - menuWidth / 2;
+      left = Math.max(8, Math.min(left, viewportWidth - menuWidth - 8));
+
+      setMenuStyle({ top: `${top}px`, left: `${left}px` });
+    }
+
+    updatePosition();
+    window.addEventListener('resize', updatePosition);
+    window.addEventListener('scroll', updatePosition, true);
+    return () => {
+      window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition, true);
+    };
+  }, [menuOpen]);
 
   const handleSend = () => {
     if (input.trim()) {
@@ -312,78 +356,80 @@ const MessageInput = ({ onSend }) => {
     }
   };
 
-  const menuItems = [
-    { icon: Brain, label: 'Study Mode', color: 'from-purple-500 to-pink-500' },
-    { icon: '📷', label: 'Insert Image', color: 'from-cyan-500 to-blue-500' },
-    { icon: '📄', label: 'Insert File', color: 'from-green-500 to-emerald-500' },
-  ];
-
   return (
     <div className="p-6 border-t border-slate-800/50 bg-slate-950/50 backdrop-blur-2xl">
       <div className="flex gap-3 items-end max-w-5xl mx-auto">
-        {/* Plus Menu Button */}
+        {/* Plus button (left of typing field) */}
         <div className="relative">
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            onClick={() => setMenuOpen(!menuOpen)}
+            onClick={() => setMenuOpen((s) => !s)}
+            ref={btnRef}
+            aria-expanded={menuOpen}
+            aria-label={menuOpen ? 'Close menu' : 'Open menu'}
             className="p-4 bg-slate-900/80 backdrop-blur-xl border border-slate-700/50 rounded-2xl text-slate-400 hover:text-white hover:border-cyan-500/50 hover:shadow-lg hover:shadow-cyan-500/20 transition-all relative z-20"
           >
             <motion.div
               animate={{ rotate: menuOpen ? 45 : 0 }}
-              transition={{ type: "spring", damping: 20, stiffness: 300 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 30 }}
             >
-              <Plus className="w-5 h-5" />
+              {/* swap icons visually: Plus when closed, X when open */}
+              {menuOpen ? (
+                <X className="w-5 h-5" />
+              ) : (
+                <Plus className="w-5 h-5" />
+              )}
             </motion.div>
           </motion.button>
 
-          {/* Tooltip Menu */}
-          <AnimatePresence>
-            {menuOpen && (
-              <>
-                {/* Backdrop */}
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  onClick={() => setMenuOpen(false)}
-                  className="fixed inset-0 z-10"
-                />
-                
-                {/* Menu */}
-                <motion.div
-                  initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                  transition={{ type: "spring", damping: 25, stiffness: 400 }}
-                  className="absolute bottom-full left-0 mb-3 bg-slate-900/95 backdrop-blur-2xl border border-slate-700/50 rounded-2xl shadow-2xl shadow-black/50 overflow-hidden z-30 min-w-[200px]"
-                >
-                  {menuItems.map((item, idx) => (
-                    <motion.button
-                      key={idx}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: idx * 0.05 }}
-                      whileHover={{ x: 4, backgroundColor: 'rgba(15, 23, 42, 0.8)' }}
-                      onClick={() => setMenuOpen(false)}
-                      className="w-full flex items-center gap-3 px-4 py-3 text-left transition-all group border-b border-slate-800/30 last:border-b-0"
-                    >
-                      <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${item.color} flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform`}>
-                        {typeof item.icon === 'string' ? (
-                          <span className="text-sm">{item.icon}</span>
-                        ) : (
-                          <item.icon className="w-4 h-4" />
-                        )}
-                      </div>
-                      <span className="text-sm text-slate-300 group-hover:text-white transition-colors font-medium">
-                        {item.label}
-                      </span>
-                    </motion.button>
-                  ))}
-                </motion.div>
-              </>
-            )}
-          </AnimatePresence>
+          {/* Backdrop to close the menu when clicking outside */}
+          {menuOpen && (
+            <div
+              className="fixed inset-0 z-10"
+              onClick={() => setMenuOpen(false)}
+            />
+          )}
+
+          {/* Tooltip menu rendered into document.body via portal so it's always on top */}
+          {menuOpen && createPortal(
+            <AnimatePresence>
+              <motion.div
+                ref={menuRef}
+                initial={{ opacity: 0, y: 8, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 8, scale: 0.95 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                style={menuStyle || {}}
+                className="fixed bg-slate-900/95 backdrop-blur-2xl border border-slate-700/50 rounded-2xl shadow-2xl shadow-black/50 overflow-hidden z-50 min-w-[180px]"
+              >
+                <div className="py-2">
+                  <button
+                    onClick={() => setMenuOpen(false)}
+                    className="w-full flex items-center gap-3 px-4 py-2 text-left text-sm text-slate-300 hover:bg-slate-800/60 hover:text-white transition-colors"
+                  >
+                    <Brain className="w-4 h-4 text-purple-400" />
+                    Study Mode
+                  </button>
+                  <button
+                    onClick={() => setMenuOpen(false)}
+                    className="w-full flex items-center gap-3 px-4 py-2 text-left text-sm text-slate-300 hover:bg-slate-800/60 hover:text-white transition-colors"
+                  >
+                    <Image className="w-4 h-4 text-cyan-400" />
+                    Insert Image
+                  </button>
+                  <button
+                    onClick={() => setMenuOpen(false)}
+                    className="w-full flex items-center gap-3 px-4 py-2 text-left text-sm text-slate-300 hover:bg-slate-800/60 hover:text-white transition-colors"
+                  >
+                    <File className="w-4 h-4 text-emerald-400" />
+                    Insert File
+                  </button>
+                </div>
+              </motion.div>
+            </AnimatePresence>,
+            document.body
+          )}
         </div>
 
         <div className="flex-1 bg-slate-900/80 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-4 focus-within:border-cyan-500/50 focus-within:shadow-lg focus-within:shadow-cyan-500/20 transition-all">
@@ -547,22 +593,21 @@ const Ami = () => {
             className="p-4 border-b border-slate-800/50 bg-slate-950/50 backdrop-blur-2xl relative z-10"
           >
             <div className="flex items-center justify-between max-w-5xl mx-auto">
-              <div className="flex items-center gap-4">
-                <motion.button
-                  onClick={() => setSidebarOpen(!sidebarOpen)}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="p-2.5 hover:bg-slate-800/50 rounded-xl transition-all border border-slate-700/30 hover:border-cyan-500/30"
-                >
-                  <Menu className="w-5 h-5 text-slate-400 hover:text-cyan-400" />
-                </motion.button>
-                
-                {!sidebarOpen && (
-                  <motion.div 
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    className="flex items-center gap-4"
+              {/* Left header group. When sidebar is closed we absolutely position the visible block
+                  on large screens but render an invisible duplicate spacer to preserve layout width. */}
+              <div className="relative flex items-center">
+                {/* Visible block (fixed on lg when sidebar closed so it sits flush to viewport left) */}
+                <div className={`flex items-center gap-4 ${!sidebarOpen ? 'lg:fixed lg:left-4 lg:top-4 lg:z-50' : ''}`}>
+                  <motion.button
+                    onClick={() => setSidebarOpen(!sidebarOpen)}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="p-2.5 hover:bg-slate-800/50 rounded-xl transition-all border border-slate-700/30 hover:border-cyan-500/30"
                   >
+                    <Menu className="w-5 h-5 text-slate-400 hover:text-cyan-400" />
+                  </motion.button>
+
+                  <div className="flex items-center gap-4">
                     <motion.div
                       className="relative"
                       whileHover={{ scale: 1.05 }}
@@ -573,7 +618,7 @@ const Ami = () => {
                           animate={{
                             rotate: [0, 360],
                           }}
-                          transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+                          transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
                         />
                         <Sparkles className="w-6 h-6 text-white relative z-10" />
                       </div>
@@ -590,7 +635,7 @@ const Ami = () => {
                         transition={{ duration: 2, repeat: Infinity }}
                       />
                     </motion.div>
-                    
+
                     <div>
                       <h1 className="text-xl font-bold bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
                         Ami
@@ -606,7 +651,20 @@ const Ami = () => {
                         <span className="text-xs text-slate-400 font-medium">Always Online</span>
                       </div>
                     </div>
-                  </motion.div>
+                  </div>
+                </div>
+
+                {/* Invisible spacer duplicate to preserve header width when the visible block is positioned absolute on lg */}
+                {(!sidebarOpen) && (
+                  <div className="invisible lg:block" aria-hidden="true">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12" />
+                      <div>
+                        <div className="h-4 w-24" />
+                        <div className="h-3 w-32 mt-2" />
+                      </div>
+                    </div>
+                  </div>
                 )}
               </div>
             </div>
