@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Mic, Menu, X, MessageSquare, Settings, Clock, Sparkles, TrendingUp, Brain, BookOpen, Plus, Zap, Code, BarChart3, Image, File } from 'lucide-react';
+import { Send, Mic, Menu, X, MessageSquare, Settings, Clock, Sparkles, TrendingUp, Brain, BookOpen, Plus, Zap, Code, BarChart3, Image, File, ChevronDown } from 'lucide-react';
 
 // Animated Background Component with Particles
 const AnimatedBackground = () => {
@@ -282,29 +282,100 @@ const TypingIndicator = () => {
 };
 
 // Chat Window Component
-const ChatWindow = ({ messages, isTyping }) => {
+const ChatWindow = React.forwardRef(({ messages, isTyping }, ref) => {
   const scrollRef = useRef(null);
+  const [userScrolledUp, setUserScrolledUp] = useState(false);
+
+  // Expose methods to parent component
+  React.useImperativeHandle(ref, () => ({
+    resetScrollState: () => {
+      setUserScrolledUp(false);
+    }
+  }));
+
+  const scrollToBottom = (smooth = true) => {
+    if (scrollRef.current) {
+      const scrollElement = scrollRef.current;
+      scrollElement.scrollTo({
+        top: scrollElement.scrollHeight,
+        behavior: smooth ? 'smooth' : 'auto'
+      });
+    }
+  };
+
+  const checkScrollPosition = () => {
+    if (scrollRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
+      const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
+      setUserScrolledUp(!isNearBottom);
+    }
+  };
 
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    // Auto-scroll to bottom when messages change, but only if user hasn't scrolled up
+    if (!userScrolledUp) {
+      const timeoutId = setTimeout(() => scrollToBottom(true), 100);
+      return () => clearTimeout(timeoutId);
     }
-  }, [messages, isTyping]);
+  }, [messages, userScrolledUp]);
+
+  useEffect(() => {
+    // Always scroll to bottom when typing status changes (new message or typing indicator)
+    if (isTyping) {
+      const timeoutId = setTimeout(() => scrollToBottom(true), 100);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [isTyping]);
+
+  useEffect(() => {
+    // Initial scroll to bottom without animation
+    scrollToBottom(false);
+  }, []);
 
   return (
-    <div
-      ref={scrollRef}
-      className="flex-1 overflow-y-auto px-6 py-8 space-y-8 scrollbar-thin scrollbar-thumb-slate-700/50 scrollbar-track-transparent hover:scrollbar-thumb-slate-600/50"
-    >
-      <AnimatePresence mode="popLayout">
-        {messages.map((msg) => (
-          <MessageBubble key={msg.id} message={msg} isBot={msg.isBot} />
-        ))}
-        {isTyping && <TypingIndicator />}
+    <div className="flex-1 relative">
+      <div
+        ref={scrollRef}
+        onScroll={checkScrollPosition}
+        className="absolute inset-0 overflow-y-auto overflow-x-hidden px-6 py-6 scrollbar-thin scrollbar-thumb-slate-700/50 scrollbar-track-transparent hover:scrollbar-thumb-slate-600/50 scroll-smooth"
+      >
+        <div className="space-y-6 pb-6">
+          <AnimatePresence mode="popLayout">
+            {messages.map((msg) => (
+              <MessageBubble key={msg.id} message={msg} isBot={msg.isBot} />
+            ))}
+            {isTyping && <TypingIndicator />}
+          </AnimatePresence>
+          {/* Bottom spacing so last message doesn't touch the input field */}
+          <div className="h-4" />
+        </div>
+      </div>
+
+      {/* Scroll to bottom button */}
+      <AnimatePresence>
+        {userScrolledUp && (
+          <motion.button
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => {
+              setUserScrolledUp(false);
+              scrollToBottom(true);
+            }}
+            className="absolute bottom-6 right-6 p-3 bg-slate-900/90 backdrop-blur-xl border border-slate-700/50 rounded-full text-slate-400 hover:text-white hover:border-cyan-500/50 hover:shadow-lg hover:shadow-cyan-500/20 transition-all z-10"
+            aria-label="Scroll to bottom"
+          >
+            <ChevronDown className="w-5 h-5" />
+          </motion.button>
+        )}
       </AnimatePresence>
     </div>
   );
-};
+});
+
+ChatWindow.displayName = 'ChatWindow';
 
 // Enhanced Message Input
 const MessageInput = ({ onSend }) => {
@@ -523,8 +594,8 @@ const MessageInput = ({ onSend }) => {
   }, [images]);
 
   return (
-    <div className="p-6 border-t border-slate-800/50 bg-slate-950/50 backdrop-blur-2xl">
-      <div className="flex gap-3 items-end max-w-5xl mx-auto">
+    <div className="p-4 border-t border-slate-800/50 bg-slate-950/80 backdrop-blur-2xl">
+      <div className="flex gap-3 items-end max-w-4xl mx-auto">
         {/* Plus button (left of typing field) */}
         <div className="relative">
           <motion.button
@@ -801,7 +872,7 @@ const MessageInput = ({ onSend }) => {
         </div>,
         document.body
       )}
-      <div className="flex gap-2 mt-4 max-w-5xl mx-auto flex-wrap">
+      <div className="flex gap-2 mt-3 max-w-4xl mx-auto flex-wrap">
         {[
           { icon: TrendingUp, label: 'Stock Chart' },
           { icon: Brain, label: 'Quiz Me' },
@@ -838,6 +909,7 @@ const Ami = () => {
     },
   ]);
   const [isTyping, setIsTyping] = useState(false);
+  const chatWindowRef = useRef(null);
 
   const handleSendMessage = (text) => {
     const userMessage = {
@@ -847,8 +919,14 @@ const Ami = () => {
       time: 'Just now',
     };
     setMessages([...messages, userMessage]);
+    
+    // Reset scroll state when user sends a message
+    if (chatWindowRef.current && chatWindowRef.current.resetScrollState) {
+      chatWindowRef.current.resetScrollState();
+    }
 
     setIsTyping(true);
+    
     setTimeout(() => {
       // Detect if user wants special content
       let response = "I understand your question. I'm here to assist you with anything you need. This is a demo response - in a real implementation, I would provide intelligent, contextual responses to your queries.";
@@ -918,12 +996,12 @@ const Ami = () => {
       <div className="flex-1 flex overflow-hidden relative">
         <Sidebar isOpen={sidebarOpen} onToggle={() => setSidebarOpen(!sidebarOpen)} />
 
-        <main className="flex-1 flex flex-col min-w-0 relative">
+        <main className="flex-1 flex flex-col min-w-0 relative h-screen overflow-hidden">
           {/* Enhanced Header */}
           <motion.header
             initial={{ y: -20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            className="p-4 border-b border-slate-800/50 bg-slate-950/50 backdrop-blur-2xl relative z-10"
+            className="flex-shrink-0 p-4 border-b border-slate-800/50 bg-slate-950/50 backdrop-blur-2xl relative z-10"
           >
             <div className="flex items-center justify-between max-w-5xl mx-auto">
               {/* Left header group. When sidebar is closed we absolutely position the visible block
@@ -1003,11 +1081,16 @@ const Ami = () => {
             </div>
           </motion.header>
 
-          {/* Chat Window */}
-          <ChatWindow messages={messages} isTyping={isTyping} />
+          {/* Chat Container - takes remaining space */}
+          <div className="flex-1 relative flex flex-col overflow-hidden">
+            {/* Chat Window */}
+            <ChatWindow ref={chatWindowRef} messages={messages} isTyping={isTyping} />
 
-          {/* Message Input */}
-          <MessageInput onSend={handleSendMessage} />
+            {/* Message Input - Fixed at bottom */}
+            <div className="flex-shrink-0">
+              <MessageInput onSend={handleSendMessage} />
+            </div>
+          </div>
         </main>
       </div>
     </div>
