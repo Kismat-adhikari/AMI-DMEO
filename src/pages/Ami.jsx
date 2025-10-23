@@ -617,17 +617,19 @@ const MessageInput = ({ onSend }) => {
             <div className="absolute inset-0 z-40 flex items-center justify-center pointer-events-none">
               <div className="flex flex-col items-center gap-2 bg-gradient-to-br from-slate-900/80 to-slate-800/70 border border-slate-700/50 rounded-xl px-6 py-4 backdrop-blur-lg">
                 <div className="flex items-center gap-3">
-                  {dragKind === 'image' ? (
-                    <Image className="w-6 h-6 text-cyan-400" />
-                  ) : (
-                    <File className="w-6 h-6 text-emerald-400" />
-                  )}
-                      <div className="text-center">
-                        <div className="text-xl leading-none" style={{ fontFamily: '"Bebas Neue", system-ui, sans-serif', letterSpacing: '0.06em' }}>DROP IT HERE</div>
-                        <div className="text-xs text-slate-400 mt-1" style={{ fontFamily: '"Space Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, monospace' }}>
-                          {dragKind === 'image' ? 'image(s) — release to attach' : dragKind === 'file' ? 'file(s) — release to attach' : 'files or images — release to attach'}
-                        </div>
-                      </div>
+                  <div style={{ transform: 'rotate(-12deg)' }}>
+                    {dragKind === 'image' ? (
+                      <Image className="w-6 h-6 text-cyan-400" />
+                    ) : (
+                      <File className="w-6 h-6 text-emerald-400" />
+                    )}
+                  </div>
+                  <div className="text-center">
+                    <div className="text-xl leading-none" style={{ fontFamily: '"Bebas Neue", system-ui, sans-serif', letterSpacing: '0.06em' }}>DROP IT HERE</div>
+                    <div className="text-xs text-slate-400 mt-1" style={{ fontFamily: '"Space Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, monospace' }}>
+                      {dragKind === 'image' ? 'image(s) — release to attach' : dragKind === 'file' ? 'file(s) — release to attach' : 'files or images — release to attach'}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -676,11 +678,11 @@ const MessageInput = ({ onSend }) => {
           {images && images.length > 0 && (
             <div className="flex gap-2 flex-wrap mb-2">
               {images.map((src, i) => (
-                <div key={src} className="relative rounded-md overflow-hidden bg-black/20 max-w-[140px]">
+                <div key={src} className="relative rounded-md overflow-hidden bg-black/20 w-[140px] h-[140px]">
                   <img
                     src={src}
                     alt={`preview-${i}`}
-                    className="w-full h-auto max-h-[140px] object-cover cursor-zoom-in block"
+                    className="w-full h-full object-cover cursor-zoom-in block"
                     onClick={() => setPreviewIndex(i)}
                   />
                   <button
@@ -781,9 +783,13 @@ const MessageInput = ({ onSend }) => {
         <div className="fixed inset-0 z-60 flex items-center justify-center pointer-events-none">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
           <div className="relative z-70 flex items-center gap-6 bg-slate-900/80 border border-slate-700/50 rounded-2xl px-8 py-6">
-            <div className="flex items-center gap-3 transform -rotate-6">
-              <Image className="w-8 h-8 text-cyan-400 -rotate-3" />
-              <File className="w-8 h-8 text-emerald-400 rotate-6" />
+            <div className="flex items-center gap-3">
+              <div style={{ transform: 'rotate(-12deg)' }}>
+                <Image className="w-8 h-8 text-cyan-400" />
+              </div>
+              <div style={{ transform: 'rotate(12deg)' }}>
+                <File className="w-8 h-8 text-emerald-400" />
+              </div>
             </div>
             <div className="text-center">
               <div className="text-3xl text-white" style={{ fontFamily: '"Bebas Neue", system-ui, sans-serif', letterSpacing: '0.03em' }}>DROP TO SHARE</div>
