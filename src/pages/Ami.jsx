@@ -90,10 +90,10 @@ const Sidebar = ({ isOpen, onToggle }) => {
 
           <motion.aside
             initial={{ width: 0, opacity: 0 }}
-            animate={{ width: 280, opacity: 1 }}
+            animate={{ width: 240, opacity: 1 }}
             exit={{ width: 0, opacity: 0 }}
             transition={{ type: "spring", damping: 30, stiffness: 300 }}
-            className="fixed left-0 top-0 z-50 h-screen bg-slate-950/80 backdrop-blur-2xl border-r border-slate-800/50 flex-shrink-0 overflow-hidden lg:relative lg:z-auto"
+            className="fixed left-0 top-0 z-50 h-screen bg-slate-950/80 backdrop-blur-2xl border-r border-slate-800/50 flex-shrink-0 overflow-x-hidden w-[240px] max-w-[240px] lg:relative lg:z-auto"
           >
           <div className="flex flex-col h-full p-4">
             {/* Header */}
@@ -128,25 +128,25 @@ const Sidebar = ({ isOpen, onToggle }) => {
             </motion.button>
 
             {/* Conversations List */}
-            <div className="flex-1 overflow-y-auto space-y-2 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
+            <div className="flex-1 overflow-y-auto overflow-x-hidden space-y-2 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
               {conversations.map((conv, idx) => (
                 <motion.div
                   key={conv.id}
-                  initial={{ opacity: 0, x: -20 }}
+                  initial={{ opacity: 0, x: -12 }}
                   animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: idx * 0.05 }}
-                  whileHover={{ x: 4 }}
-                  className="p-3 rounded-xl bg-slate-900/50 hover:bg-slate-800/70 border border-slate-800/50 hover:border-cyan-500/30 cursor-pointer transition-all group"
+                  transition={{ delay: idx * 0.04 }}
+                  whileHover={{ x: 3 }}
+                  className="p-2 rounded-lg bg-slate-900/50 hover:bg-slate-800/70 border border-slate-800/50 hover:border-cyan-500/30 cursor-pointer transition-all group max-w-[200px]"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-slate-800 rounded-lg group-hover:bg-gradient-to-br group-hover:from-cyan-500/20 group-hover:to-purple-500/20 transition-all">
-                      <conv.icon className="w-4 h-4 text-slate-400 group-hover:text-cyan-400 transition-colors" />
+                  <div className="flex items-center gap-2">
+                    <div className="p-1 bg-slate-800 rounded-md group-hover:bg-gradient-to-br group-hover:from-cyan-500/20 group-hover:to-purple-500/20 transition-all">
+                      <conv.icon className="w-3 h-3 text-slate-400 group-hover:text-cyan-400 transition-colors" />
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-white group-hover:text-cyan-400 transition-colors truncate">
+                    <div className="flex-1 min-w-0 max-w-[120px]">
+                      <p className="text-xs font-medium text-white group-hover:text-cyan-400 transition-colors truncate">
                         {conv.title}
                       </p>
-                      <span className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
+                      <span className="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5">
                         <Clock className="w-3 h-3" />
                         {conv.time}
                       </span>
@@ -355,18 +355,51 @@ const MessageInput = ({ onSend }) => {
   }, [menuOpen]);
 
   const handleSend = () => {
-    if (input.trim()) {
-      onSend(input);
+    if (input.trim() || (images && images.length > 0)) {
+      onSend(input, images);
       setInput('');
+      if (images && images.length > 0) {
+        // revoke all object URLs and clear
+        images.forEach((u) => URL.revokeObjectURL(u));
+        setImages([]);
+      }
     }
   };
 
+  const textareaRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const [images, setImages] = useState([]);
+  const [previewIndex, setPreviewIndex] = useState(null);
+
   const handleKeyPress = (e) => {
+    // handle Enter to send (preserve Shift+Enter for newline)
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSend();
     }
   };
+
+  // Auto-resize logic: set height to scrollHeight, with a max clamp
+  useEffect(() => {
+    const ta = textareaRef.current;
+    if (!ta) return;
+
+    // reset height to compute correct scrollHeight
+    ta.style.height = 'auto';
+    const maxHeight = 160; // px - roughly 4-6 lines depending on line-height
+    const newHeight = Math.min(ta.scrollHeight, maxHeight);
+    ta.style.height = newHeight + 'px';
+  }, [input]);
+
+  // revoke object URL on unmount or when image changes
+  useEffect(() => {
+    // cleanup on unmount: revoke any object URLs
+    return () => {
+      if (images && images.length) {
+        images.forEach((u) => URL.revokeObjectURL(u));
+      }
+    };
+  }, [images]);
 
   return (
     <div className="p-6 border-t border-slate-800/50 bg-slate-950/50 backdrop-blur-2xl">
@@ -424,7 +457,11 @@ const MessageInput = ({ onSend }) => {
                     Study Mode
                   </button>
                   <button
-                    onClick={() => setMenuOpen(false)}
+                    onClick={() => {
+                      // open the hidden file input to pick an image
+                      if (fileInputRef && fileInputRef.current) fileInputRef.current.click();
+                      setMenuOpen(false);
+                    }}
                     className="w-full flex items-center gap-3 px-4 py-2 text-left text-sm text-slate-300 hover:bg-slate-800/60 hover:text-white transition-colors"
                   >
                     <Image className="w-4 h-4 text-cyan-400" />
@@ -444,14 +481,64 @@ const MessageInput = ({ onSend }) => {
           )}
         </div>
 
-        <div className="flex-1 bg-slate-900/80 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-4 focus-within:border-cyan-500/50 focus-within:shadow-lg focus-within:shadow-cyan-500/20 transition-all">
+        <div className="flex-1 bg-slate-900/80 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-3 focus-within:border-cyan-500/50 focus-within:shadow-lg focus-within:shadow-cyan-500/20 transition-all">
+          {/* Hidden file input for image insertion */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            className="hidden"
+            onChange={(e) => {
+              const files = Array.from(e.target.files || []);
+              if (files.length) {
+                const urls = files.map((f) => URL.createObjectURL(f));
+                // append to existing images
+                setImages((prev) => [...prev, ...urls]);
+              }
+              // close menu if open
+              setMenuOpen(false);
+            }}
+          />
+
+          {/* Inline image previews (flow left-aligned) */}
+          {images && images.length > 0 && (
+            <div className="flex gap-2 flex-wrap mb-2">
+              {images.map((src, i) => (
+                <div key={src} className="relative rounded-md overflow-hidden bg-black/20 max-w-[140px]">
+                  <img
+                    src={src}
+                    alt={`preview-${i}`}
+                    className="w-full h-auto max-h-[140px] object-cover cursor-zoom-in block"
+                    onClick={() => setPreviewIndex(i)}
+                  />
+                  <button
+                    onClick={() => {
+                      // remove this image
+                      URL.revokeObjectURL(src);
+                      setImages((prev) => prev.filter((u, idx) => idx !== i));
+                      // if preview modal open was this image, close it
+                      if (previewIndex === i) setPreviewIndex(null);
+                    }}
+                    aria-label={`Remove image ${i + 1}`}
+                    className="absolute top-1 right-1 bg-black/60 rounded-full p-1 text-white hover:bg-black/80"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
           <textarea
+            ref={textareaRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyPress={handleKeyPress}
+            onKeyDown={handleKeyPress}
             placeholder="Ask Ami anything... (charts, quizzes, flashcards & more)"
-            className="w-full bg-transparent text-white placeholder-slate-500 outline-none resize-none max-h-40 text-sm leading-relaxed"
-            rows="1"
+            className="w-full bg-transparent text-white placeholder-slate-500 outline-none resize-none text-sm leading-relaxed transition-all duration-150 ease-in-out px-2 py-2 max-h-[160px] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-700/50 scrollbar-track-transparent"
+            rows={1}
+            style={{ overflowY: 'auto' }}
           />
         </div>
         <motion.button
@@ -480,6 +567,22 @@ const MessageInput = ({ onSend }) => {
       </div>
       
       {/* Quick Actions */}
+      {/* Fullscreen image preview modal */}
+      {previewIndex !== null && images && images[previewIndex] && createPortal(
+        <div className="fixed inset-0 z-60 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/80" onClick={() => setPreviewIndex(null)} />
+          <div className="relative max-w-[90vw] max-h-[90vh] p-4 lg:max-w-[800px] lg:max-h-[80vh]">
+            <img src={images[previewIndex]} alt={`full-preview-${previewIndex}`} className="w-full h-auto max-h-[80vh] lg:max-h-[72vh] object-contain rounded shadow-xl" />
+            <button
+              onClick={() => setPreviewIndex(null)}
+              className="absolute top-6 right-6 lg:top-12 lg:right-8 bg-black/70 rounded-full p-2 text-white hover:bg-black/90"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>,
+        document.body
+      )}
       <div className="flex gap-2 mt-4 max-w-5xl mx-auto flex-wrap">
         {[
           { icon: TrendingUp, label: 'Stock Chart' },
