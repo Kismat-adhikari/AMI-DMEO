@@ -77,13 +77,24 @@ const Sidebar = ({ isOpen, onToggle }) => {
   return (
     <AnimatePresence>
       {isOpen && (
-        <motion.aside
-          initial={{ width: 0, opacity: 0 }}
-          animate={{ width: 280, opacity: 1 }}
-          exit={{ width: 0, opacity: 0 }}
-          transition={{ type: "spring", damping: 30, stiffness: 300 }}
-          className="h-screen bg-slate-950/80 backdrop-blur-2xl border-r border-slate-800/50 flex-shrink-0 overflow-hidden"
-        >
+        <>
+          {/* Backdrop for mobile: sits behind the sidebar and closes it when tapped */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 0.45 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            className="fixed inset-0 bg-black z-40 lg:hidden"
+            onClick={onToggle}
+          />
+
+          <motion.aside
+            initial={{ width: 0, opacity: 0 }}
+            animate={{ width: 280, opacity: 1 }}
+            exit={{ width: 0, opacity: 0 }}
+            transition={{ type: "spring", damping: 30, stiffness: 300 }}
+            className="fixed left-0 top-0 z-50 h-screen bg-slate-950/80 backdrop-blur-2xl border-r border-slate-800/50 flex-shrink-0 overflow-hidden lg:relative lg:z-auto"
+          >
           <div className="flex flex-col h-full p-4">
             {/* Header */}
             <div className="flex items-center justify-between mb-4">
@@ -154,6 +165,7 @@ const Sidebar = ({ isOpen, onToggle }) => {
             </div>
           </div>
         </motion.aside>
+          </>
       )}
     </AnimatePresence>
   );
