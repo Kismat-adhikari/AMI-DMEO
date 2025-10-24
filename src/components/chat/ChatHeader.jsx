@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Menu, Sparkles } from 'lucide-react';
 
 // Chat Header Component
-const ChatHeader = ({ sidebarOpen, onToggleSidebar }) => {
+const ChatHeader = ({ sidebarOpen, onToggleSidebar, studyMode = false }) => {
   return (
     <motion.header
       initial={{ y: -20, opacity: 0 }}
@@ -30,9 +30,17 @@ const ChatHeader = ({ sidebarOpen, onToggleSidebar }) => {
                 className="relative"
                 whileHover={{ scale: 1.05 }}
               >
-                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-cyan-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-lg shadow-cyan-500/30 relative overflow-hidden">
+                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg relative overflow-hidden transition-all duration-1000 ${
+                  studyMode 
+                    ? 'bg-gradient-to-br from-purple-500 via-indigo-500 to-blue-500 shadow-purple-500/30' 
+                    : 'bg-gradient-to-br from-amber-500 via-orange-500 to-rose-500 shadow-orange-500/30'
+                }`}>
                   <motion.div
-                    className="absolute inset-0 bg-gradient-to-br from-pink-500 via-purple-500 to-cyan-500"
+                    className={`absolute inset-0 transition-all duration-1000 ${
+                      studyMode 
+                        ? 'bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-500' 
+                        : 'bg-gradient-to-br from-rose-500 via-orange-500 to-amber-500'
+                    }`}
                     animate={{
                       rotate: [0, 360],
                     }}
@@ -55,18 +63,28 @@ const ChatHeader = ({ sidebarOpen, onToggleSidebar }) => {
               </motion.div>
 
               <div>
-                <h1 className="text-xl font-bold bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+                <h1 className={`text-xl font-bold bg-clip-text text-transparent transition-all duration-1000 ${
+                  studyMode 
+                    ? 'bg-gradient-to-r from-purple-400 via-indigo-400 to-blue-400' 
+                    : 'bg-gradient-to-r from-amber-400 via-orange-400 to-rose-400'
+                }`}>
                   Ami
                 </h1>
                 <div className="flex items-center gap-2">
                   <motion.div 
-                    className="w-2 h-2 bg-green-400 rounded-full shadow-lg shadow-green-400/50"
+                    className={`w-2 h-2 rounded-full shadow-lg transition-all duration-1000 ${
+                      studyMode 
+                        ? 'bg-purple-400 shadow-purple-400/50' 
+                        : 'bg-green-400 shadow-green-400/50'
+                    }`}
                     animate={{
                       opacity: [1, 0.5, 1],
                     }}
                     transition={{ duration: 2, repeat: Infinity }}
                   />
-                  <span className="text-xs text-slate-400 font-medium">Always Online</span>
+                  <span className="text-xs text-slate-400 font-medium">
+                    {studyMode ? 'Study Mode Active' : 'Always Online'}
+                  </span>
                 </div>
               </div>
             </div>

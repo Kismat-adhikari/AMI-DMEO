@@ -5,7 +5,7 @@ import MessageBubble from './MessageBubble';
 import TypingIndicator from './TypingIndicator';
 
 // Chat Window Component
-const ChatWindow = React.forwardRef(({ messages, isTyping }, ref) => {
+const ChatWindow = React.forwardRef(({ messages, isTyping, studyMode = false }, ref) => {
   const scrollRef = useRef(null);
   const [userScrolledUp, setUserScrolledUp] = useState(false);
 
@@ -65,7 +65,7 @@ const ChatWindow = React.forwardRef(({ messages, isTyping }, ref) => {
         <div className="space-y-6 pb-6">
           <AnimatePresence mode="popLayout">
             {messages.map((msg) => (
-              <MessageBubble key={msg.id} message={msg} isBot={msg.isBot} />
+              <MessageBubble key={msg.id} message={msg} isBot={msg.isBot} studyMode={studyMode} />
             ))}
             {isTyping && <TypingIndicator />}
           </AnimatePresence>

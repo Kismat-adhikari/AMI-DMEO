@@ -2,9 +2,20 @@ import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, Mic, Plus, X, Brain, Image, File, TrendingUp, BookOpen, Zap } from 'lucide-react';
+import VoiceWave from '../ui/VoiceWave';
 
 // Enhanced Message Input
-const MessageInput = ({ onSend, isLandingMode = false }) => {
+const MessageInput = ({ 
+  onSend, 
+  onStudyMode, 
+  onVoiceRecord, 
+  studyMode = false, 
+  isRecording = false, 
+  audioLevel = 0,
+  transcribedText = '',
+  onTranscribedTextUsed,
+  isLandingMode = false 
+}) => {
   const [input, setInput] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
   const btnRef = useRef(null);
@@ -206,6 +217,14 @@ const MessageInput = ({ onSend, isLandingMode = false }) => {
     ta.style.height = newHeight + 'px';
   }, [input]);
 
+  // Handle transcribed text
+  useEffect(() => {
+    if (transcribedText) {
+      setInput(transcribedText);
+      onTranscribedTextUsed && onTranscribedTextUsed();
+    }
+  }, [transcribedText, onTranscribedTextUsed]);
+
   // Cleanup object URLs only on component unmount
   useEffect(() => {
     // cleanup on unmount: revoke any object URLs
@@ -228,7 +247,11 @@ const MessageInput = ({ onSend, isLandingMode = false }) => {
             ref={btnRef}
             aria-expanded={menuOpen}
             aria-label={menuOpen ? 'Close menu' : 'Open menu'}
-            className="p-4 bg-slate-900/80 backdrop-blur-xl border border-slate-700/50 rounded-2xl text-slate-400 hover:text-white hover:border-cyan-500/50 hover:shadow-lg hover:shadow-cyan-500/20 transition-all relative z-20"
+            className={`p-4 bg-slate-800/80 backdrop-blur-xl border rounded-2xl text-slate-300 hover:text-white hover:shadow-lg transition-all duration-700 relative z-20 ${
+              studyMode 
+                ? 'border-purple-500/30 hover:border-purple-400/60 hover:shadow-purple-500/20' 
+                : 'border-orange-500/30 hover:border-orange-400/60 hover:shadow-orange-500/20'
+            }`}
           >
             <motion.div
               animate={{ rotate: menuOpen ? 45 : 0 }}
@@ -265,11 +288,18 @@ const MessageInput = ({ onSend, isLandingMode = false }) => {
               >
                 <div className="py-2">
                   <button
-                    onClick={() => setMenuOpen(false)}
-                    className="w-full flex items-center gap-3 px-4 py-2 text-left text-sm text-slate-300 hover:bg-slate-800/60 hover:text-white transition-colors"
+                    onClick={() => {
+                      onStudyMode && onStudyMode();
+                      setMenuOpen(false);
+                    }}
+                    className={`w-full flex items-center gap-3 px-4 py-2 text-left text-sm transition-colors duration-500 ${
+                      studyMode 
+                        ? 'text-purple-300 bg-purple-500/10 hover:bg-purple-500/20' 
+                        : 'text-slate-300 hover:bg-slate-800/60 hover:text-white'
+                    }`}
                   >
-                    <Brain className="w-4 h-4 text-purple-400" />
-                    Study Mode
+                    <Brain className={`w-4 h-4 transition-colors duration-500 ${studyMode ? 'text-purple-400' : 'text-purple-400'}`} />
+                    {studyMode ? 'Exit Study Mode' : 'Study Mode'}
                   </button>
                   <button
                     onClick={() => {
@@ -304,7 +334,11 @@ const MessageInput = ({ onSend, isLandingMode = false }) => {
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
-          className={`flex-1 bg-slate-900/80 backdrop-blur-xl border border-slate-700/50 rounded-2xl ${isLandingMode ? 'p-4' : 'p-3'} focus-within:border-cyan-500/50 focus-within:shadow-lg focus-within:shadow-cyan-500/20 transition-all relative`}
+          className={`flex-1 bg-slate-800/60 backdrop-blur-xl border rounded-2xl ${isLandingMode ? 'p-4' : 'p-3'} focus-within:shadow-lg transition-all duration-700 relative ${
+            studyMode 
+              ? 'border-purple-500/30 focus-within:border-purple-400/60 focus-within:shadow-purple-500/20' 
+              : 'border-orange-500/30 focus-within:border-orange-400/60 focus-within:shadow-orange-500/20'
+          }`}
         >
           {/* Drag overlay */}
           {isDragging && (
@@ -435,11 +469,19 @@ const MessageInput = ({ onSend, isLandingMode = false }) => {
           whileTap={{ scale: 0.95 }}
           onClick={handleSend}
           disabled={!input.trim() && (!images || images.length === 0) && (!attachments || attachments.length === 0)}
-          className="p-4 bg-gradient-to-r from-cyan-500 via-purple-500 to-pink-500 rounded-2xl text-white hover:shadow-2xl hover:shadow-cyan-500/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden group"
+          className={`p-4 rounded-2xl text-white hover:shadow-2xl transition-all duration-700 disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden group ${
+            studyMode 
+              ? 'bg-gradient-to-r from-purple-500 via-indigo-500 to-blue-500 hover:shadow-purple-500/40' 
+              : 'bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 hover:shadow-orange-500/40'
+          }`}
         >
           <Send className="w-5 h-5 relative z-10" />
           <motion.div
-            className="absolute inset-0 bg-gradient-to-r from-pink-500 via-purple-500 to-cyan-500 opacity-0 group-hover:opacity-100 transition-opacity"
+            className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-all duration-700 ${
+              studyMode 
+                ? 'bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500' 
+                : 'bg-gradient-to-r from-rose-500 via-orange-500 to-amber-500'
+            }`}
             animate={{
               x: ['-100%', '100%'],
             }}
@@ -449,9 +491,57 @@ const MessageInput = ({ onSend, isLandingMode = false }) => {
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
-          className="p-4 bg-slate-900/80 backdrop-blur-xl border border-slate-700/50 rounded-2xl text-slate-400 hover:text-white hover:border-cyan-500/50 hover:shadow-lg hover:shadow-cyan-500/20 transition-all"
+          onClick={onVoiceRecord}
+          className={`p-4 backdrop-blur-xl border rounded-2xl transition-all duration-700 relative overflow-hidden ${
+            isRecording
+              ? studyMode 
+                ? 'bg-purple-500/20 border-purple-400/50 text-purple-300 shadow-lg shadow-purple-500/30' 
+                : 'bg-orange-500/20 border-orange-400/50 text-orange-300 shadow-lg shadow-orange-500/30'
+              : studyMode
+                ? 'bg-slate-800/80 border-purple-500/30 text-slate-300 hover:text-purple-300 hover:border-purple-400/60 hover:shadow-lg hover:shadow-purple-500/20'
+                : 'bg-slate-800/80 border-orange-500/30 text-slate-300 hover:text-orange-300 hover:border-orange-400/60 hover:shadow-lg hover:shadow-orange-500/20'
+          }`}
         >
-          <Mic className="w-5 h-5" />
+          <AnimatePresence mode="wait">
+            {isRecording ? (
+              <motion.div
+                key="recording"
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                className="flex items-center justify-center"
+              >
+                <VoiceWave isRecording={isRecording} audioLevel={audioLevel} studyMode={studyMode} />
+              </motion.div>
+            ) : (
+              <motion.div
+                key="idle"
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+              >
+                <Mic className="w-5 h-5" />
+              </motion.div>
+            )}
+          </AnimatePresence>
+          
+          {/* Recording pulse effect */}
+          {isRecording && (
+            <motion.div
+              className={`absolute inset-0 rounded-2xl ${
+                studyMode ? 'bg-purple-400/30' : 'bg-orange-400/30'
+              }`}
+              animate={{
+                scale: [1, 1.1, 1],
+                opacity: [0.3, 0.6, 0.3],
+              }}
+              transition={{
+                duration: 1.5,
+                repeat: Infinity,
+                ease: "easeInOut"
+              }}
+            />
+          )}
         </motion.button>
       </div>
       
@@ -511,9 +601,9 @@ const MessageInput = ({ onSend, isLandingMode = false }) => {
               transition={{ delay: idx * 0.05 }}
               whileHover={{ scale: 1.05, y: -2 }}
               whileTap={{ scale: 0.95 }}
-              className="px-4 py-2 bg-slate-900/50 backdrop-blur-xl border border-slate-700/50 rounded-xl text-slate-400 hover:text-white hover:border-cyan-500/50 text-xs font-medium transition-all flex items-center gap-2 group flex-shrink-0"
+              className="px-4 py-2 bg-slate-800/40 backdrop-blur-xl border border-orange-500/30 rounded-xl text-orange-300/70 hover:text-white hover:border-orange-400/60 text-xs font-medium transition-all flex items-center gap-2 group flex-shrink-0"
             >
-              <action.icon className="w-3.5 h-3.5 group-hover:text-cyan-400 transition-colors" />
+              <action.icon className="w-3.5 h-3.5 group-hover:text-orange-300 transition-colors" />
               {action.label}
             </motion.button>
           ))}

@@ -4,7 +4,7 @@ import { Sparkles, File, Image as ImageIcon, X } from 'lucide-react';
 import { createPortal } from 'react-dom';
 
 // Enhanced Message Bubble with Rich Content Support
-const MessageBubble = ({ message, isBot }) => {
+const MessageBubble = ({ message, isBot, studyMode = false }) => {
   const [imagePreviewIndex, setImagePreviewIndex] = useState(null);
 
   // Helper function to format file size
@@ -34,11 +34,19 @@ const MessageBubble = ({ message, isBot }) => {
     >
       {isBot && (
         <motion.div
-          className="w-10 h-10 rounded-2xl bg-gradient-to-br from-cyan-500 via-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0 shadow-lg relative overflow-hidden"
+          className={`w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg relative overflow-hidden transition-all duration-1000 ${
+            studyMode 
+              ? 'bg-gradient-to-br from-purple-500 via-indigo-500 to-blue-500' 
+              : 'bg-gradient-to-br from-amber-500 via-orange-500 to-rose-500'
+          }`}
           whileHover={{ scale: 1.05, rotate: 5 }}
         >
           <motion.div
-            className="absolute inset-0 bg-gradient-to-br from-pink-500 via-purple-500 to-cyan-500"
+            className={`absolute inset-0 transition-all duration-1000 ${
+              studyMode 
+                ? 'bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-500' 
+                : 'bg-gradient-to-br from-rose-500 via-orange-500 to-amber-500'
+            }`}
             animate={{
               rotate: [0, 360],
             }}
@@ -64,8 +72,14 @@ const MessageBubble = ({ message, isBot }) => {
             : 'p-4' // Normal padding for text-only messages
         } ${
           isBot
-            ? 'bg-slate-900/90 border border-slate-700/50 text-slate-100 shadow-xl shadow-slate-900/50'
-            : 'bg-gradient-to-r from-cyan-500 via-purple-500 to-pink-500 text-white shadow-xl shadow-cyan-500/30'
+            ? `bg-slate-800/90 border text-slate-100 shadow-xl shadow-slate-900/50 transition-all duration-1000 ${
+                studyMode ? 'border-purple-500/20' : 'border-orange-500/20'
+              }`
+            : `text-white shadow-xl transition-all duration-1000 ${
+                studyMode 
+                  ? 'bg-gradient-to-r from-purple-500 via-indigo-500 to-blue-500 shadow-purple-500/30' 
+                  : 'bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 shadow-orange-500/30'
+              }`
         }`}
       >
         {/* Content Container for Charts/MCQ/Flashcards and Attachments */}

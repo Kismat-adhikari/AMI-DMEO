@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 
 // Welcome prompts component
-const WelcomePrompts = () => {
+const WelcomePrompts = ({ studyMode = false }) => {
   const prompts = [
     "What can I help with?",
     "What's on your mind?", 
@@ -29,11 +29,22 @@ const WelcomePrompts = () => {
       exit={{ opacity: 0, y: -10 }}
       className="text-center mb-8"
     >
-      <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent mb-4">
+      <h1 className={`text-4xl md:text-5xl font-bold bg-clip-text text-transparent mb-4 transition-all duration-1000 ${
+        studyMode 
+          ? 'bg-gradient-to-r from-purple-400 via-indigo-400 to-blue-400' 
+          : 'bg-gradient-to-r from-amber-400 via-orange-400 to-rose-400'
+      }`}>
         {prompts[currentPrompt]}
       </h1>
-      <p className="text-slate-400 text-lg">
-        I can help with analysis, quizzes, flashcards, and much more
+      <p className={`text-lg transition-all duration-1000 ${
+        studyMode 
+          ? 'text-purple-200/70' 
+          : 'text-orange-200/70'
+      }`}>
+        {studyMode 
+          ? 'Deep learning mode - comprehensive explanations and interactive study sessions' 
+          : 'I can help with analysis, quizzes, flashcards, and much more'
+        }
       </p>
     </motion.div>
   );
