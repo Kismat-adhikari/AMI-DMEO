@@ -4,12 +4,19 @@ import { MessageSquare, Settings, Clock, Plus, TrendingUp, Brain, Code, BarChart
 
 // Sidebar Component - ChatGPT Style
 const Sidebar = ({ isOpen, onToggle }) => {
+  /*
+    The placeholder conversations list below is intentionally kept for later
+    use as sample data / visual placeholders. The user asked to COMMENT this
+    out (do not remove) so it is not shown presently but remains available
+    for future work.
+
   const conversations = [
     { id: 1, title: 'Stock Analysis Dashboard', time: '2m ago', icon: TrendingUp },
     { id: 2, title: 'Biology Flashcards', time: '1h ago', icon: Brain },
     { id: 3, title: 'Python Quiz Generator', time: '3h ago', icon: Code },
     { id: 4, title: 'Market Trends Chart', time: '5h ago', icon: BarChart3 },
   ];
+  */
 
   return (
     <AnimatePresence>
@@ -64,7 +71,12 @@ const Sidebar = ({ isOpen, onToggle }) => {
               <span className="relative z-10">New Chat</span>
             </motion.button>
 
-            {/* Conversations List */}
+            {/*
+              Conversations List (COMMENTED OUT)
+              The example conversation items were intentionally present as layout
+              placeholders. They are commented so they won't be shown now but can
+              be restored later by uncommenting.
+
             <div className="flex-1 overflow-y-auto overflow-x-hidden space-y-2 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
               {conversations.map((conv, idx) => (
                 <motion.div
@@ -91,6 +103,25 @@ const Sidebar = ({ isOpen, onToggle }) => {
                   </div>
                 </motion.div>
               ))}
+            </div>
+            */}
+
+            {/* Temporary placeholder shown while example conversation items are hidden. */}
+            <div className="flex-1 flex items-center justify-center">
+              <div className="text-center">
+                <p className="text-sm text-slate-400 mb-3">Conversation placeholders are hidden for now.</p>
+                <button
+                  onClick={() => {
+                    // Placeholder action: later this should open or create a chat with Mr. Pasa
+                    // For now we just log to console; the UI text invites the user to start the conversation.
+                    console.log('Start a conversation with Mr. Pasa');
+                  }}
+                  className="px-4 py-2 bg-cyan-500 text-white rounded-xl font-medium hover:opacity-95 transition"
+                >
+                  Start a conversation with Mr. Pasa
+                </button>
+                <p className="text-xs text-slate-500 mt-2">Click to create a sample chat and view the history.</p>
+              </div>
             </div>
 
             {/* Bottom Actions */}
